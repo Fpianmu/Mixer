@@ -2,5 +2,8 @@
 # CMakeLists in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.22)
 
+#set(LV_CONF_PATH ${CMAKE_CURRENT_SOURCE_DIR}/main/lv_conf.h)
+add_compile_options("-DLV_CONF_PATH=\"${CMAKE_SOURCE_DIR}/lv_conf.h\"")
+
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(project1)

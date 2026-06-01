@@ -19,6 +19,8 @@ extern "C" {
 
 void init_all(void);
 void fwork(int duration1,int duration2,int duration3,int duration4,int duration5);
+void fstop(void);
+void push_and_out(int direction);
 
 #ifdef __cplusplus
 }

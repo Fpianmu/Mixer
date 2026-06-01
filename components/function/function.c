@@ -9,6 +9,16 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "esp_lvgl_port.h"
+#include "esp_event.h"
+#include "lcd.h"
+#include "touch.h"
+#include "lvgl_ui.h"
+#include "ui.h"
+#include "vars.h"
+#include "nvs_flash.h"
+#include "wifi.h"
+#include "http.h"
 #include <stdio.h>
 
 static const char *TAG = "function";
@@ -44,6 +54,48 @@ void init_all()
     // 手动为对应的电调上电，否则校准失败！
 
     vTaskDelay(pdMS_TO_TICKS(1000));
+
+     /* ---- 系统基础 ---- */
+    nvs_flash_init();                  /* NVS 存储 (WiFi 配置) */
+    esp_event_loop_create_default();   /* 事件循环 (WiFi + HTTP 依赖) */
+
+    /* ---- WiFi AP + TCP 服务器 (8080) ---- */
+    wifi_init_softap();
+    xTaskCreate(tcp_server_task, "tcp_server", 4096, (void*)AF_INET, 5, NULL);
+
+    /* ---- HTTP 服务器 (80, 网页控制面板) ---- */
+    http_server_start();
+
+    /* ---- LCD ---- */
+    bsp_lcd_init();
+    ESP_LOGI(TAG, "LCD init done");
+
+    /* ---- 触摸 ---- */
+    ft6336u_touch_init();
+
+    /* ---- LVGL 内核 + 注册显示/触摸 ---- */
+    lvgl_ui_init();
+
+    /* ---- EEZ Studio UI ---- */
+    lvgl_port_lock(0);
+    vars_init();       /* 初始化全局变量 (dough_weight 默认 200g) */
+    ui_init();         /* EEZ Flow 初始化 + 创建 6 屏幕 + 加载首页 */
+    lvgl_port_unlock();
+
+    ESP_LOGI(TAG, "System started, WiFi: dough_mixer / 12345678");
+}
+void fstop(void)
+{
+    esc_set_throttle(&esc1, 0.0); 
+    esc_set_throttle(&esc2, 0.0); 
+    gpio_set(7,0);
+    gpio_set(16,0);
+    gpio_set(18,0);
+    stepper_stop();
+}
+void push_and_out(int direction)
+{
+    stepper_move_for(2000, 1000, direction);
 }
 void fwork(int duration1,int duration2,int duration3,int duration4,int duration5)
 {
@@ -52,17 +104,17 @@ void fwork(int duration1,int duration2,int duration3,int duration4,int duration5
     开始工作
     */
    //Task1 加入面粉
-    if (duration1 >=5000)
+    if (duration1 >=10000)
     {
-        int n = duration1/5000;
+        int n = duration1/10000;
         for (int i = 1;i <= n;i++)
         {
             esc_set_throttle(&esc1, 40.0); // 电调1 40%油门
             gpio_set(18,1);
-            vTaskDelay(pdMS_TO_TICKS(5000));
+            vTaskDelay(pdMS_TO_TICKS(10000));
             esc_set_throttle(&esc1, 0.0); // 电调1 熄火
             gpio_set(18,0);
-            vTaskDelay(pdMS_TO_TICKS(2500));
+            vTaskDelay(pdMS_TO_TICKS(5000));
         }
     }
     else
@@ -86,6 +138,12 @@ void fwork(int duration1,int duration2,int duration3,int duration4,int duration5
     vTaskDelay(pdMS_TO_TICKS(duration3));
     servo2_set_angle(0);
     vTaskDelay(pdMS_TO_TICKS(500));
+    servo_set_angle(10);
+    vTaskDelay(pdMS_TO_TICKS(500));
+    servo2_set_angle(65);
+    vTaskDelay(pdMS_TO_TICKS(duration3));
+    servo2_set_angle(0);
+    vTaskDelay(pdMS_TO_TICKS(500));
     //加料2
     servo_set_angle(100);
      vTaskDelay(pdMS_TO_TICKS(500));
@@ -97,14 +155,14 @@ void fwork(int duration1,int duration2,int duration3,int duration4,int duration5
     gpio_set(16,0); //研磨
     //Task4 关盖子搅拌
     // 方式1：使用动态函数，正转 3 秒，频率 1000Hz
-    stepper_move_for(2900, 1000, 0);
-    vTaskDelay(pdMS_TO_TICKS(3000)); // 等待运动结束
+    //stepper_move_for(1500, 1000, 0);
+    //vTaskDelay(pdMS_TO_TICKS(3000)); // 等待运动结束
 
-    esc_set_throttle(&esc2, 40.0); // 电调1 40%油门
+    esc_set_throttle(&esc2, 40.0); // 电调2 40%油门
     vTaskDelay(pdMS_TO_TICKS(duration5));
-    esc_set_throttle(&esc2, 0.0); // 电调1 熄火
+    esc_set_throttle(&esc2, 0.0); // 电调2 熄火
 
     // 方式2：反转 2 秒，频率 1000Hz
-    stepper_move_for(2900, 1000, 1);
+    stepper_move_for(1500, 1000, 1);
     vTaskDelay(pdMS_TO_TICKS(3000));
 }

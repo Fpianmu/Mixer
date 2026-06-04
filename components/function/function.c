@@ -12,6 +12,7 @@
 #include "esp_lvgl_port.h"
 #include "esp_event.h"
 #include "lcd.h"
+#include "function.h"
 #include "touch.h"
 #include "lvgl_ui.h"
 #include "ui.h"
@@ -24,6 +25,14 @@
 static const char *TAG = "function";
 
 esc_handle_t esc1,esc2;
+
+const float k_flour = 120/267.5;
+const float k_water = 65/267.5;
+const float k_grain = 80/267.5;
+const float k_yeast = 2/267.5;
+const float k_salt = 0.5/267.5;
+
+int flour,water,grain,yeast,salt;
 
 void init_all()
 {
@@ -93,10 +102,22 @@ void fstop(void)
     gpio_set(18,0);
     stepper_stop();
 }
+
 void push_and_out(int direction)
 {
     stepper_move_for(2000, 1000, direction);
 }
+
+void weight_work(uint32_t weight)
+{
+    flour =(int) (weight*k_flour*1000)/4.6;
+    water =(int) (weight*k_water*1000)/11;
+    grain =(int) (weight*k_grain*1000)/0.12;
+    yeast =(int) (weight*k_yeast)/0.3;
+    salt =(int) (weight*k_salt)/0.3;
+    fwork(flour,water,500,grain,300000);
+}
+
 void fwork(int duration1,int duration2,int duration3,int duration4,int duration5)
 {
     /*
@@ -107,6 +128,10 @@ void fwork(int duration1,int duration2,int duration3,int duration4,int duration5
     if (duration1 >=10000)
     {
         int n = duration1/10000;
+        if (duration1-n*10000>=5000)
+        {
+            n = n + 1;
+        }
         for (int i = 1;i <= n;i++)
         {
             esc_set_throttle(&esc1, 40.0); // 电调1 40%油门
@@ -131,28 +156,30 @@ void fwork(int duration1,int duration2,int duration3,int duration4,int duration5
     gpio_set(7,0); //水泵
     //Task3 研磨电机与加料舵机同时工作
     gpio_set(16,1); //研磨
-    //加料1
-    servo_set_angle(10);
-    vTaskDelay(pdMS_TO_TICKS(500));
-    servo2_set_angle(65);
-    vTaskDelay(pdMS_TO_TICKS(duration3));
-    servo2_set_angle(0);
-    vTaskDelay(pdMS_TO_TICKS(500));
-    servo_set_angle(10);
-    vTaskDelay(pdMS_TO_TICKS(500));
-    servo2_set_angle(65);
-    vTaskDelay(pdMS_TO_TICKS(duration3));
-    servo2_set_angle(0);
-    vTaskDelay(pdMS_TO_TICKS(500));
-    //加料2
-    servo_set_angle(100);
-     vTaskDelay(pdMS_TO_TICKS(500));
-    servo2_set_angle(60);
-    vTaskDelay(pdMS_TO_TICKS(duration3));
-    servo2_set_angle(0);
+    for (int i=1;i<=yeast;i++)
+    {
+        //加料1
+        servo_set_angle(145);
+        vTaskDelay(pdMS_TO_TICKS(500));
+        servo2_set_angle(65);
+        vTaskDelay(pdMS_TO_TICKS(duration3));
+        servo2_set_angle(0);
+        vTaskDelay(pdMS_TO_TICKS(200));
+        
+    }
+    for (int i=1;i<=salt;i++)
+    {
+        //加料2
+        servo_set_angle(55);
+        vTaskDelay(pdMS_TO_TICKS(500));
+        servo2_set_angle(60);
+        vTaskDelay(pdMS_TO_TICKS(duration3));
+        servo2_set_angle(0);
+    } 
     vTaskDelay(pdMS_TO_TICKS(duration4));
     //研磨停止
     gpio_set(16,0); //研磨
+
     //Task4 关盖子搅拌
     // 方式1：使用动态函数，正转 3 秒，频率 1000Hz
     //stepper_move_for(1500, 1000, 0);
@@ -163,6 +190,6 @@ void fwork(int duration1,int duration2,int duration3,int duration4,int duration5
     esc_set_throttle(&esc2, 0.0); // 电调2 熄火
 
     // 方式2：反转 2 秒，频率 1000Hz
-    stepper_move_for(1500, 1000, 1);
-    vTaskDelay(pdMS_TO_TICKS(3000));
+    //stepper_move_for(1500, 1000, 1);
+    //vTaskDelay(pdMS_TO_TICKS(3000));
 }

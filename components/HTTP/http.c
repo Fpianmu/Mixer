@@ -33,7 +33,7 @@ static uint32_t g_current_weight = 0;
 /* ---- 电机任务：调用 motor_coordinated_control_ui_http ---- */
 static void motor_task(void *pvParameters)
 {
-    fwork(10000,3000,500,30000,20000);
+    weight_work(g_current_weight);
     g_motor_state = "idle";
     g_motor_task_handle = NULL;
     ESP_LOGI(TAG, "Motor task completed, back to idle");

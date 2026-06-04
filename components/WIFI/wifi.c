@@ -314,6 +314,7 @@ static void wifi_process_cmd(int sock, char *str)
     /* H — 启动电机协同控制 (使用默认参数, 不传重量) */
     if (strcasecmp(str, "H") == 0) {
         //motor_coordinated_control();
+        weight_work(300);
         wifi_send_msg(sock, "Coordinated control started: SUCCESS");
         return;
     }

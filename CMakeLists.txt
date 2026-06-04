@@ -6,4 +6,4 @@ cmake_minimum_required(VERSION 3.22)
 add_compile_options("-DLV_CONF_PATH=\"${CMAKE_SOURCE_DIR}/lv_conf.h\"")
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(project1)
+project(project)

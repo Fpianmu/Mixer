@@ -21,7 +21,7 @@ esp_err_t servo_init(int gpio_num)
     // 1. 配置 LEDC 定时器
     ledc_timer_config_t timer_cfg = {
         .speed_mode = speed_mode,
-        .timer_num = LEDC_TIMER_0,
+        .timer_num = LEDC_TIMER_2,  /* 与 servo2 共享 Timer2 (50Hz) */
         .duty_resolution = SERVO_PWM_RES,
         .freq_hz = SERVO_PWM_FREQ,
         .clk_cfg = LEDC_AUTO_CLK
@@ -37,7 +37,7 @@ esp_err_t servo_init(int gpio_num)
         .gpio_num = gpio_num,
         .speed_mode = speed_mode,
         .channel = channel,
-        .timer_sel = LEDC_TIMER_0,
+        .timer_sel = LEDC_TIMER_2,  /* 与 servo2 共享 Timer2 (50Hz) */
         .duty = 0,              // 初始关闭
         .hpoint = 0
     };

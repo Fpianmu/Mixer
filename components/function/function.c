@@ -26,10 +26,10 @@ static const char *TAG = "function";
 
 esc_handle_t esc1,esc2;
 
-const float k_flour = 120/267.5;
-const float k_water = 65/267.5;
+const float k_flour = 500.0/765.0; //120/267.5
+const float k_water = 260.0/765.0;
 const float k_grain = 80/267.5;
-const float k_yeast = 2/267.5;
+const float k_yeast = 5.0/765.0;
 const float k_salt = 0.5/267.5;
 
 int flour,water,grain,yeast,salt;
@@ -37,7 +37,8 @@ int flour,water,grain,yeast,salt;
 void init_all()
 {
     // 启动 GPIO  
-    gpio_set(7,0); //水泵
+    ledc_pwm_set_state(0); //水泵 (PWM)
+    gpio_set(7,0);
     gpio_set(16,0); //研磨
     gpio_set(18,0); //面粉磁铁
     //初始化舵机
@@ -54,7 +55,7 @@ void init_all()
     };
     stepper_init(&config);
     //电调初始化
-     // 初始化电调1：GPIO 8，使用通道 6
+     // 初始化电调1：GPIO 15，使用通道 6
     esc_init(&esc1, 15, LEDC_CHANNEL_6);  //面粉
     // 初始化电调2：GPIO 9，使用通道 7
     esc_init(&esc2, 9, LEDC_CHANNEL_7);  //搅拌
@@ -97,6 +98,7 @@ void fstop(void)
 {
     esc_set_throttle(&esc1, 0.0); 
     esc_set_throttle(&esc2, 0.0); 
+    ledc_pwm_set_state(0);
     gpio_set(7,0);
     gpio_set(16,0);
     gpio_set(18,0);
@@ -105,17 +107,17 @@ void fstop(void)
 
 void push_and_out(int direction)
 {
-    stepper_move_for(2000, 1000, direction);
+    stepper_move_for(4800, 1000, direction);
 }
 
 void weight_work(uint32_t weight)
 {
-    flour =(int) (weight*k_flour*1000)/4.6;
-    water =(int) (weight*k_water*1000)/11;
-    grain =(int) (weight*k_grain*1000)/0.12;
-    yeast =(int) (weight*k_yeast)/0.3;
-    salt =(int) (weight*k_salt)/0.3;
-    fwork(flour,water,500,grain,300000);
+    flour =(int)((weight*k_flour*1000)/2.8324);
+    water =(int)((weight*k_water*1000)/28.9);
+    grain =(int)((weight*k_grain*1000)/0.12);
+    yeast =(int)((weight*k_yeast)/0.3);
+    salt =(int)((weight*k_salt)/0.3);
+    fwork(flour,water,500,4000,360000);
 }
 
 void fwork(int duration1,int duration2,int duration3,int duration4,int duration5)
@@ -128,10 +130,7 @@ void fwork(int duration1,int duration2,int duration3,int duration4,int duration5
     if (duration1 >=10000)
     {
         int n = duration1/10000;
-        if (duration1-n*10000>=5000)
-        {
-            n = n + 1;
-        }
+        int time_left = duration1 % 10000;
         for (int i = 1;i <= n;i++)
         {
             esc_set_throttle(&esc1, 40.0); // 电调1 40%油门
@@ -141,6 +140,11 @@ void fwork(int duration1,int duration2,int duration3,int duration4,int duration5
             gpio_set(18,0);
             vTaskDelay(pdMS_TO_TICKS(5000));
         }
+        esc_set_throttle(&esc1, 40.0); // 电调1 40%油门
+        gpio_set(18,1);
+        vTaskDelay(pdMS_TO_TICKS(time_left));
+        esc_set_throttle(&esc1, 0.0); // 电调1 熄火
+        gpio_set(18,0);
     }
     else
     {
@@ -151,9 +155,11 @@ void fwork(int duration1,int duration2,int duration3,int duration4,int duration5
          gpio_set(18,0);
     }
     //Task2 水泵工作
-    gpio_set(7,1); //水泵
+    ledc_pwm_set_state(1); //水泵 (PWM)
+    gpio_set(7,1);
     vTaskDelay(pdMS_TO_TICKS(duration2));
-    gpio_set(7,0); //水泵
+    ledc_pwm_set_state(0); //水泵 (PWM)
+    gpio_set(7,0);
     //Task3 研磨电机与加料舵机同时工作
     gpio_set(16,1); //研磨
     for (int i=1;i<=yeast;i++)

@@ -1,27 +1,21 @@
 #ifndef LEDC_PWM_H
 #define LEDC_PWM_H
 
-#include "driver/ledc.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- * @brief 初始化 PWM 驱动
- * @param gpio_num   LED 连接的 GPIO 编号 
- * @param freq_hz    PWM 频率，单位 Hz (如 5000)
- * @param duty       初始占空比 (0 到 (2^duty_resolution - 1))
- * @return esp_err_t ESP_OK 成功，否则失败
+ * @brief 两路 PWM 开关控制（适配 DRV8870 电机驱动模块）
+ *
+ *        通道0: GPIO 12, 开启时 50% 占空比
+ *        通道1: GPIO 13, 始终 0% 占空比
+ *        PWM 频率: 50kHz (DRV8870 最佳工作频率)
+ *
+ * @param state  0 = 关闭两路输出 (占空比均为 0%)
+ *               1 = 开启 (通道0=50%, 通道1=0%)
  */
-esp_err_t pwm_init(int gpio_num, uint32_t freq_hz, uint32_t duty);
-
-/**
- * @brief 更新 PWM 占空比
- * @param duty 新的占空比
- * @return esp_err_t
- */
-esp_err_t ledc_pwm_set_duty(uint32_t duty);
+void ledc_pwm_set_state(int state);
 
 #ifdef __cplusplus
 }

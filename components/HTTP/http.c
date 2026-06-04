@@ -9,9 +9,6 @@
 
 #include "http.h"
 #include "function.h"
-#include "stepper.h"
-#include "servo.h"
-#include "gpiowork.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"

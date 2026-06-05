@@ -56,6 +56,8 @@ typedef struct _objects_t {
     lv_obj_t *fanhui;
     lv_obj_t *ok_time;
     lv_obj_t *fanhui_1;
+    lv_obj_t *ok_time_1;
+    lv_obj_t *fanhui_2;
     lv_obj_t *obj9;
     lv_obj_t *obj10;
     lv_obj_t *set_200g;

@@ -22,7 +22,6 @@ static TaskHandle_t g_motor_task_handle = NULL;
 static void motor_task(void *pvParameters)
 {
     uint32_t weight = (uint32_t)(uintptr_t)pvParameters;
-    //计算面粉量水量小料用量杂粮用量
     weight_work(weight);
     g_motor_task_handle = NULL;
     vTaskDelete(NULL);

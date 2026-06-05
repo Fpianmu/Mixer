@@ -5,7 +5,6 @@
  * 管理 dough_weight / motor_running 变量的 getter/setter
  */
 #include "vars.h"
-#include "function.h"
 #include "ui.h"
 #include "esp_log.h"
 

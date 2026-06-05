@@ -26,10 +26,10 @@ static const char *TAG = "function";
 
 esc_handle_t esc1,esc2;
 
-const float k_flour = 500.0/765.0; //120/267.5
-const float k_water = 260.0/765.0;
+const float k_flour = 120/267.5; //120/267.5
+const float k_water = 65/267.5;
 const float k_grain = 80/267.5;
-const float k_yeast = 5.0/765.0;
+const float k_yeast = 2/267.5;
 const float k_salt = 0.5/267.5;
 
 int flour,water,grain,yeast,salt;
@@ -114,10 +114,10 @@ void weight_work(uint32_t weight)
 {
     flour =(int)((weight*k_flour*1000)/2.8324);
     water =(int)((weight*k_water*1000)/28.9);
-    grain =(int)((weight*k_grain*1000)/0.12);
+    grain =(int)((weight*k_grain*1000*60)/4.43);
     yeast =(int)((weight*k_yeast)/0.3);
     salt =(int)((weight*k_salt)/0.3);
-    fwork(flour,water,500,4000,360000);
+    fwork(flour,water,500,grain,400000);
 }
 
 void fwork(int duration1,int duration2,int duration3,int duration4,int duration5)
@@ -161,7 +161,7 @@ void fwork(int duration1,int duration2,int duration3,int duration4,int duration5
     ledc_pwm_set_state(0); //水泵 (PWM)
     gpio_set(7,0);
     //Task3 研磨电机与加料舵机同时工作
-    gpio_set(16,1); //研磨
+   
     for (int i=1;i<=yeast;i++)
     {
         //加料1
@@ -182,9 +182,16 @@ void fwork(int duration1,int duration2,int duration3,int duration4,int duration5
         vTaskDelay(pdMS_TO_TICKS(duration3));
         servo2_set_angle(0);
     } 
-    vTaskDelay(pdMS_TO_TICKS(duration4));
-    //研磨停止
-    gpio_set(16,0); //研磨
+    int num = duration4 / 60000 ;
+    for (int i=1;i<=num;i++)
+    {
+        gpio_set(16,1); //研磨
+        vTaskDelay(pdMS_TO_TICKS(60000));
+        //研磨停止
+        gpio_set(16,0); //研磨
+        vTaskDelay(pdMS_TO_TICKS(30000));
+    }
+    vTaskDelay(pdMS_TO_TICKS(duration4%60000));
 
     //Task4 关盖子搅拌
     // 方式1：使用动态函数，正转 3 秒，频率 1000Hz

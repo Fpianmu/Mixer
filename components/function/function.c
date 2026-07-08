@@ -20,6 +20,8 @@
 #include "nvs_flash.h"
 #include "wifi.h"
 #include "http.h"
+#include "xiaozhi.h"
+#include "ctl_mutex.h"
 #include <stdio.h>
 
 static const char *TAG = "function";
@@ -39,7 +41,7 @@ void init_all()
     // 启动 GPIO  
     ledc_pwm_set_state(0); //水泵 (PWM)
     gpio_set(7,0);
-    gpio_set(16,0); //研磨
+    gpio_set(46,0); //研磨
     gpio_set(18,0); //面粉磁铁
     //初始化舵机
     servo_init(8); //旋转
@@ -76,6 +78,9 @@ void init_all()
     /* ---- HTTP 服务器 (80, 网页控制面板) ---- */
     http_server_start();
 
+    /* ---- 小智语音控制 (I2S 音频 + WebSocket) ---- */
+    xTaskCreate((TaskFunction_t)xz_init_wrapper, "xz_init", 4096 * 3, NULL, 3, NULL);
+
     /* ---- LCD ---- */
     bsp_lcd_init();
     ESP_LOGI(TAG, "LCD init done");
@@ -100,7 +105,7 @@ void fstop(void)
     esc_set_throttle(&esc2, 0.0); 
     ledc_pwm_set_state(0);
     gpio_set(7,0);
-    gpio_set(16,0);
+    gpio_set(46,0);
     gpio_set(18,0);
     stepper_stop();
 }
@@ -117,17 +122,27 @@ void weight_work(uint32_t weight)
     grain =(int)((weight*k_grain*1000*60)/4.43);
     yeast =(int)((weight*k_yeast)/0.3);
     salt =(int)((weight*k_salt)/0.3);
-    fwork(flour,water,500,grain,400000);
+    if (weight > 50)
+    {
+        fwork(flour,water,500,grain,400000);
+    }
+    else
+    {
+        yeast = 4;
+        salt = 2;
+        fwork(20000,1500,500,40000,30000);
+    }
 }
 
 void fwork(int duration1,int duration2,int duration3,int duration4,int duration5)
 {
+    //ledc_pwm_set_state(1);
     /*
     初始化全部完成
     开始工作
     */
    //Task1 加入面粉
-    if (duration1 >=10000)
+    if (duration1 > 10000)
     {
         int n = duration1/10000;
         int time_left = duration1 % 10000;
@@ -183,15 +198,25 @@ void fwork(int duration1,int duration2,int duration3,int duration4,int duration5
         servo2_set_angle(0);
     } 
     int num = duration4 / 60000 ;
-    for (int i=1;i<=num;i++)
+    if (duration4 > 60000)
     {
-        gpio_set(16,1); //研磨
-        vTaskDelay(pdMS_TO_TICKS(60000));
-        //研磨停止
-        gpio_set(16,0); //研磨
-        vTaskDelay(pdMS_TO_TICKS(30000));
+        for (int i=1;i<=num;i++)
+        {
+            gpio_set(46,1); //研磨
+            vTaskDelay(pdMS_TO_TICKS(60000));
+            //研磨停止
+            gpio_set(46,0); //研磨
+            vTaskDelay(pdMS_TO_TICKS(30000));
+        }
+        vTaskDelay(pdMS_TO_TICKS(duration4%60000));
     }
-    vTaskDelay(pdMS_TO_TICKS(duration4%60000));
+    else
+    {
+        gpio_set(46,1); //研磨
+        vTaskDelay(pdMS_TO_TICKS(duration4));
+        //研磨停止
+        gpio_set(46,0); //研磨
+    }
 
     //Task4 关盖子搅拌
     // 方式1：使用动态函数，正转 3 秒，频率 1000Hz

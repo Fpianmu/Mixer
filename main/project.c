@@ -26,7 +26,6 @@ void app_main(void)
     init_all();
     while (1) 
     {
-
         if (loop_count++ % 100 == 0) 
         {
             ESP_LOGI("DEBUG", "LVGL loop running, free heap: %"PRIu32"", esp_get_free_heap_size());

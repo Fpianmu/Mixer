@@ -9,6 +9,7 @@
 #include "vars.h"
 #include "function.h"
 #include "ui.h"
+#include "ctl_mutex.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -72,6 +73,10 @@ void action_set_1000g(lv_event_t *e)
 void action_star_mixer(lv_event_t *e)
 {
     int32_t w = get_var_dough_weight();
+    if (!ctl_try_acquire(CTL_TOUCH)) {
+        ESP_LOGW(TAG, "System busy by %d, cannot start", (int)ctl_get_owner());
+        return;
+    }
     ESP_LOGI(TAG, "Start mixer, weight=%ldg", (long)w);
     set_var_motor_running(true);
     xTaskCreate(motor_task, "motor_task", 8192,
@@ -86,6 +91,7 @@ void action_stop(lv_event_t *e)
         g_motor_task_handle = NULL;
     }
     fstop();
+    ctl_release(CTL_TOUCH);
     set_var_motor_running(false);
 }
 

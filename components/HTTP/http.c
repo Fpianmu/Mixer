@@ -9,6 +9,7 @@
 
 #include "http.h"
 #include "function.h"
+#include "ctl_mutex.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
@@ -71,6 +72,12 @@ static esp_err_t api_start_post_handler(httpd_req_t *req)
     if (weight < 50) weight = 50;
 
     char resp[128];
+    if (!ctl_try_acquire(CTL_HTTP)) {
+        const char *resp = "{\"status\":\"busy\",\"msg\":\"system locked\"}";
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_send(req, resp, strlen(resp));
+        return ESP_OK;
+    }
     if (strcmp(g_motor_state, "idle") == 0) {
         g_current_weight = weight;
         g_motor_state = "kneading";
@@ -113,6 +120,7 @@ static esp_err_t api_stop_post_handler(httpd_req_t *req)
         g_motor_task_handle = NULL;
     }
     fstop();
+    ctl_release(CTL_HTTP);
     g_motor_state = "idle";
     ESP_LOGI(TAG, "Emergency stop");
 

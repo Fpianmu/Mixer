@@ -8,7 +8,7 @@ idf_component_register(
          "ui_font_my_character_32.c"   
          "vars.cpp" "eez-flow.cpp" "action.cpp"   # ... 等所有源文件
     INCLUDE_DIRS "."
-    REQUIRES lvgl function
+    REQUIRES lvgl function ctl_mutex
 )
 
 set_source_files_properties(screens.c images.c styles.c PROPERTIES LANGUAGE CXX)

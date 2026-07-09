@@ -145,20 +145,25 @@ add_table(
 
 add_para('LEDC 通道分配需考虑全局唯一性：本项目中 CH0（舵机, Timer2）、CH1（步进, Timer1）、CH2（舵机2, Timer2）、CH6/CH7（ESC×2, Timer3）已被占用，水泵模块采用 CH3（GPIO12, PWM）和 CH4（GPIO13, 低电平），与 Timer0 绑定，8 个通道全部用完。', bold_prefix='资源约束：')
 
-add_heading('2.3.5 小智 AI 语音交互', level=2)
+add_heading('2.3.5 小智 AI 智能交互', level=2)
 
-add_para('用户通过微信小程序以文字或语音方式与小智 AI 服务端交互。服务端调用 DeepSeek 大语言模型结合营养推荐引擎解析用户意图，通过 MCP 协议下发结构化控制指令至 ESP32。设备端通过 WebSocket 长连接接收指令并执行，执行结果经服务端 TTS 合成语音后在小程序或设备端播报。', bold_prefix='通信流程：')
+add_para('系统通过微信小程序作为用户入口，集成小智 AI 服务端（xiaozhi-server）实现智能饮食推荐与设备控制。用户在小程序聊天界面中描述当日饮食情况和晚餐面食需求，服务端基于 FastAPI 框架的营养推荐引擎（nutrition-service）解析饮食文本，结合规则引擎与大语言模型识别食物类别、估算摄入量，并根据当日精制主食和杂粮摄入情况，通过推荐算法计算晚餐面团中的杂粮粉配比。推荐结果经用户确认后，服务端通过 WebSocket 长连接以 MCP 协议下发结构化控制指令至 ESP32 设备端，驱动和面机完成全自动制作流程。', bold_prefix='系统概述：')
 
 add_table(
-    ['用户输入', '服务端处理', 'MCP 指令', '设备端执行'],
+    ['阶段', '小程序/用户端', '服务端处理', '数据/接口'],
     [
-        ['"开始和面 300g 饺子皮"', 'LLM 意图识别 + 营养推荐', 'start_mixer {weight:300}', 'weight_work(300)'],
-        ['"停止"', 'LLM 意图识别', 'stop_mixer', 'fstop()'],
-        ['"推出面团"', 'LLM 意图识别', 'push_out', 'push_and_out(1)'],
+        ['饮食输入', '用户文字描述当日饮食和面食需求\n例："中午牛肉面，晚上包300g饺子"', 'LLM 解析 + 规则引擎识别食物条目\n估算每项重量与类别（精制主食/杂粮/蛋白质等）', 'POST /api/v1/intake/parse\n→ ParseResult (FoodItem[] + DoughRequest)'],
+        ['确认修正', '用户确认或修改解析出的饮食清单\n调整面团目标重量', '存储确认后的饮食记录至 SQLite\n加载用户画像（年龄组/食欲/消化敏感度）', 'POST /api/v1/recommendations/coarse-grain\n→ Request (confirmed_items + dough_request)'],
+        ['营养推荐', '查看推荐结果：杂粮粉克重、普通面粉克重、水量', '推荐算法：根据当日精制主食摄入量（refined_weight）动态计算杂粮比例（10%~40%，步进5%）\n消化风险用户限制杂粮比例≤20%', '→ Recommendation\n(flour_weight_g, water_weight_g, coarse_grain_weight_g, ratio, reason)'],
+        ['执行和面', '用户点击"开始和面"', '服务端通过 WebSocket 下发 MCP 指令至 ESP32\nESP32 执行 weight_work(weight)', 'MCP tool: start_mixer\nargs: {weight: 300}'],
     ]
 )
 
+add_para('推荐算法的核心公式为：杂粮比例 = 基础 20% +（精制主食 ≥300g 则 +15% / ≥150g 则 +10%）-（已摄入杂粮 ≥100g 则 -5%），最终约束在 10%～40% 范围内并取 5% 整倍数。水量 = 面团总重 × 24%，面粉总量 = 面团总重 - 水量，杂粮粉重 = 面粉总量 × 杂粮比例。例如，用户当日已摄入约 300g 精制主食且无杂粮摄入时，推荐杂粮比例为 35%（20%+15%），300g 饺子的推荐结果为：普通面粉 148g、杂粮粉 80g、水 72g。', bold_prefix='推荐算法：')
+
 add_para('I2S0 配置为全双工模式：BCLK（GPIO14）和 WS（GPIO16）由 INMP441 麦克风与 MAX98357A 扬声器功放共享，SD（GPIO17）接收麦克风数据，DIN（GPIO7）输出扬声器数据。全双工模式仅需 4 个 GPIO，相较于分离式接法节省 2 个引脚。音频采样率 16kHz，单声道，Opus 编码，帧长 60ms。唤醒词检测基于 ESP-SR MultiNet 引擎，关键词"你好小智"，检测后进入录音状态并通过 WebSocket 实时上传音频流。', bold_prefix='音频实现：')
+
+add_para('微信小程序、小智 AI 服务端与 ESP32 设备端的三层架构将用户交互、智能决策和硬件执行分离：小程序承担展示、确认和任务发起的交互职责；服务端承担 NLP 解析、营养推荐计算和任务编排的算法职责；ESP32 承担实时电机控制和安全保护的执行职责。各层职责明确，边界清晰，便于后续独立升级任一模块。', bold_prefix='架构设计原则：')
 
 add_heading('2.3.6 流量计闭环水量控制', level=2)
 

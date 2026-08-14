@@ -18,3 +18,5 @@ dependencies:
   espressif/esp_lcd_touch_ft5x06: ^1.0.0
   espressif/esp_lvgl_port: ^2.3.0
   lvgl/lvgl: ^9.0.0
+  espressif/esp_websocket_client: '*'
+  espressif/cjson: '*'

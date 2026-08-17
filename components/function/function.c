@@ -161,18 +161,18 @@ void weight_work(uint32_t weight)
         for (int i=1;i<=2;i++)
         {
             esc_set_throttle(&esc1, 40.0); // 电调1 40%油门
-            gpio_set(18,1);
+            //gpio_set(18,1);
             if (!work_wait(8000)) return;
             esc_set_throttle(&esc1, 0.0); // 电调1 熄火
-            gpio_set(18,0);
-            if (!work_wait(4000)) return;
+            //gpio_set(18,0);
+            //if (!work_wait(4000)) return;
         }
         
         //Task2 水泵工作
 
         ledc_pwm_set_state(1); //水泵 (PWM)
         gpio_set(7,1);
-        if (!work_wait(2500)) return;
+        if (!work_wait(1200)) return;
         ledc_pwm_set_state(0); //水泵 (PWM)
         gpio_set(7,0);
 
@@ -197,7 +197,7 @@ void weight_work(uint32_t weight)
             if (!work_wait(500)) return;
             servo2_set_angle(0);
         } 
-
+         if (!work_wait(10000)) return;
         //Task
         gpio_set(16,1); //研磨
         if (!work_wait(30000)) return;
